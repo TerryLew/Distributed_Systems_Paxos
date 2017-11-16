@@ -38,8 +38,8 @@ Server::Server(int siteId, unordered_map<int, pair<string, string> >& address, i
     log.readFromDisk();
     updateInMemoryData();
     
-    string ip = address[userID].first;
-    string port = address[userID].second;
+    string ip = address[userId].first;
+    string port = address[userId].second;
     cerr << "my ip: "<<ip <<", my port: "<<stoi(port)<<"\n";
     //Init serverSock and start listen()'ing
     serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -51,7 +51,7 @@ Server::Server(int siteId, unordered_map<int, pair<string, string> >& address, i
     //Avoid bind error if the socket was not close()'d last time;
     setsockopt(serverSock,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int));
     
-    if(bind(serverSock, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
+    if(::bind(serverSock, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
         cerr << "Failed to bind";
     listen(serverSock, 5);
 }
@@ -59,7 +59,7 @@ Server::Server(int siteId, unordered_map<int, pair<string, string> >& address, i
 void Server::refreshConnection() {
     fdv.clear();//has to clear fd set, because some site can be down and up anytime
     for(auto & i : addr) {
-        if (i.first == id || ownblockeduser.find(i.first) != ownblockeduser.end()) continue;
+        if (i.first == userId || blockedUsers.find(i.first) != blockedUsers.end()) continue;
         struct hostent *server;
         const char * ip = i.second.first.c_str();
         server = gethostbyname(ip);
@@ -107,10 +107,8 @@ void *Server::startTweet(void *args) {
 }
 
 void Server::doStartTweet() {
-    int id = userId;
     while(1) {
         cout << ">> ";
-        int n;
         string cmd, input;
         cin >> cmd;
         time_t rawtime;
@@ -123,24 +121,24 @@ void Server::doStartTweet() {
         if(cmd == "tweet") {
             getline(cin, input);//get the following tweet words
             input = input.substr(1);
-            event.pupulate(userId, "tweet", input, string(asctime(lctm)), string(asctime(utctm));
+            event.populate(userId, "tweet", input, string(asctime(lctm)), string(asctime(utctm)));
             myVal = event;
             prepare();
         } else if (cmd == "block") {
             getline(cin, input);
             input = input.substr(1);
-            event.pupulate(userId, "block", input, string(asctime(lctm)), string(asctime(utctm));
+            event.populate(userId, "block", input, string(asctime(lctm)), string(asctime(utctm)));
             myVal = event;
             prepare();
-            block(event);
+            block(stoi(input));
         }
         else if (cmd == "unblock") {
             getline(cin, input);
             input = input.substr(1);
-            event.pupulate(userId, "unblock", input, string(asctime(lctm)), string(asctime(utctm));
+            event.populate(userId, "unblock", input, string(asctime(lctm)), string(asctime(utctm)));
             myVal = event;
             prepare();
-            unblock(event);
+            unblock(stoi(input));
         }
         else if (cmd == "view") view();
         else if (cmd == "viewLog") viewLog();
@@ -158,7 +156,6 @@ void *Server::HandleClient(void *args) {
 
 void Server::doHandleClient(int fd) {
     char buffer[BUFFER_SIZE];
-    int index;
     int n;
     string tmp;
     while((n = recv(fd, buffer, sizeof(buffer), 0))>0)
@@ -178,7 +175,7 @@ void Server::doSomethingWithReceivedData(string& message) {
         } else if (n > maxPrepare[slot]) {
             maxPrepare[slot] = n;
             promise(proposer, accNum[slot], accVal[slot]);
-        } else try_again(proposer);
+        } else try_again(proposer, slot);
     } else if (paxosMsg.getType() == "promise") {
         int n = paxosMsg.getNum();
         Event v = paxosMsg.getValue();
@@ -191,7 +188,7 @@ void Server::doSomethingWithReceivedData(string& message) {
         }
         majorityPromise[curSlot]++;
         if(majorityPromise[curSlot] > numSites/2) {
-            accept(curSlot, accNum_tmp[curSlot], accVal_tmp[curSlot]);
+            Accept(curSlot, accNum_tmp[curSlot], accVal_tmp[curSlot]);
         }
     } else if (paxosMsg.getType() == "accept") {
         int n = paxosMsg.getNum();
@@ -246,7 +243,7 @@ void Server::promise(int proposer, int accNum, Event accVal) {
     }
 }
 
-void Server::accept(int slot, int accNum, Event accVal) {
+void Server::Accept(int slot, int accNum, Event accVal) {
     refreshConnection();
     PaxosMsg paxosMsg("accept", slot, accNum, accVal);
     string msg_str = paxosMsg.serialize();
@@ -282,9 +279,9 @@ void Server::commit(int slot, Event accVal) {
     }
 }
 
-void Server::try_again(int prosoper) {
+void Server::try_again(int proposer, int slot) {
     refreshConnection();
-    PaxosMsg paxosMsg("try_again", slot, accVal);
+    PaxosMsg paxosMsg("try_again", slot);
     string msg_str = paxosMsg.serialize();
     const char* msg = msg_str.c_str();
     for(auto itr = fdv.begin(); itr != fdv.end(); itr++){
@@ -297,24 +294,25 @@ void Server::try_again(int prosoper) {
 }
 
 void Server::block(int blockId) {
-    block.insert(blockId);
+    blockedUsers.insert(blockId);
     updateTimeline("block", blockId);
 }
 
 void Server::unblock(int unblockId) {
-    block.erase(unblockId);
+    blockedUsers.erase(unblockId);
     updateTimeline("unblock", unblockId);
 }
 
 void Server::view() {
     vector<Tweet> vt;
-    for(auto& itr = timeline.begin(); itr != timeline.end(); itr++){
-        vt.push_back(*itr);
+    for(auto itr = timeline.begin(); itr != timeline.end(); itr++){
+        vt.push_back(Tweet(*itr));
     }
     sort(vt.begin(), vt.end(), comparetime);
     cout << "Viewable tweets:" << endl;
     for (auto itr = vt.begin(); itr != vt.end(); ++itr){
-        cout << ctime(&(itr->getLocalTime()))
+        time_t local = itr->getLocalTime();
+        cout << ctime(&(local))
              << ": User " << to_string(itr->getUserId())
              << " tweeted: " << itr->getData() << endl;
     }
@@ -322,20 +320,28 @@ void Server::view() {
 }
 
 void Server::viewLog(){
-    log.dispay();
+    log.display();
 }
 
-void Server::viewBlock(){
-    for(auto it = block.begin(); it != block.end(); it++){
-        cout << (*it).second << endl;
+void Server::viewBlock() {
+    for(auto it = blockedUsers.begin(); it != blockedUsers.end(); it++){
+        cout << *it << endl;
     }
 }
 
 int Server::chooseProposalNumber() {
-    if (myProposal==0) myProposal = siteId;
+    if (myProposal==0) myProposal = userId;
     else myProposal += numSites;
     return myProposal;
 }
 
+void Server::updateTimeline(string keyword, int target) {
+    
+}
+
+void Server::updateInMemoryData() {
+    
+}
+                           
 
 

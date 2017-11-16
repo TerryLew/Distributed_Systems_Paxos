@@ -3,16 +3,19 @@
 
 using namespace std;
 
-Tweet::Tweet(Event& e) {
+void convertTime(string itime, struct tm& ot);
+
+Tweet::Tweet(Event e) {
     userId = e.getUserId();
-    message = e.getData();
+    data = e.getData();
     
-    struct tm& ot;
-    convertTime(e.getLocalTime(), ot);
-    local = mktime(&ot);
+    struct tm tm1;
+    convertTime(e.getLocalTime(), tm1);
+    local = mktime(&tm1);
     
-    convertTime(e.getUtcTime(), ot);
-    utc = mktime(&ot);
+    struct tm tm2;
+    convertTime(e.getUtcTime(), tm2);
+    utc = mktime(&tm2);
 }
 
 

@@ -25,6 +25,7 @@
 #include "log.h"
 #include "tweet.h"
 #include "event.h"
+#include "paxosmsg.h"
 
 #define BUFFER_SIZE 256
 
@@ -33,7 +34,7 @@ using namespace std;
 class Server {
 
   private:
-    int serverSock, clientSock;
+    int serverSock;
     struct sockaddr_in serverAddr, clientAddr;
     set<pair<int, int> > fdv;
     unordered_map<int, pair<string, string> > addr;
@@ -43,19 +44,18 @@ class Server {
     
     Log log;
     set<Event> timeline;
-    unordered_set<int> block;
+    unordered_set<int> blockedUsers;
     
     int curSlot;
     int myProposal;
     Event myVal;
     vector<int> maxPrepare;
     vector<int> accNum;
-    vector<int> accVal;
+    vector<Event> accVal;
     vector<int> accNum_tmp;
-    vector<int> accVal_tmp;
+    vector<Event> accVal_tmp;
     vector<int> majorityPromise;
     vector<int> majorityAck;
-    
 
   public:
     Server(int siteId, unordered_map<int, pair<string, string> >& address, int numSites);
@@ -67,19 +67,22 @@ class Server {
     void doHandleClient(int fd);
     static void* acceptRequest(void *args);
     void doAcceptRequest();
+    void refreshConnection();
     
     void doSomethingWithReceivedData(string& message);
-    void chooseProposalNumber();
+    int chooseProposalNumber();
+    void updateTimeline(string keyword, int target);
+    void updateInMemoryData();
     
     void prepare();
     void promise(int proposer, int accNum, Event accVal);
-    void accept(int slot, int accNum, Event accVal);
+    void Accept(int slot, int accNum, Event accVal);
     void ack(int proposer, int accNum, Event accVal);
     void commit(int slot, Event accVal);
-    void try_again(int proposer);
+    void try_again(int proposer, int slot);
     
-    void block(string& input);
-    void unblock(string& input);
+    void block(int target);
+    void unblock(int target);
     void view();
     void viewLog();
     void viewBlock();

@@ -7,6 +7,7 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <vector>
 
 #include "tweet.h"
 #include "event.h"

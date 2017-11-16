@@ -6,6 +6,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <time.h>
+#include <unordered_map>
+#include <string>
+#include <sstream>
 
 #include "event.h"
 
@@ -20,12 +23,12 @@ private:
     
     //record time in two format with the first being UTC to compare and second being local time for printing
 public:
-    Tweet(Event& e);
+    Tweet(Event e);
     
     int getUserId() { return userId; }
     string getData() { return data; }
-    time_t getUtcTime() { return utc; }
-    time_t getLocalTime() { return local; }
+    time_t getUtcTime() const { return utc; }
+    time_t getLocalTime() const { return local; }
 };
 
 bool comparetime(const Tweet &i,const Tweet &j);

@@ -26,8 +26,6 @@ void Log::readFromDisk() {
     Events.clear();
     string str;
     while(getline(input, str)) {
-        int idx1 = str.find('#');
-        int idx2 = str.find('#', idx1+1);
         Event e(str);
         Events.push_back(e);
     }
@@ -41,7 +39,7 @@ void Log::addToLog(int slot, Event e) {
 
 void Log::display() {
     cout <<"____________________________________________\n";
-    for(auto& itr = Events.begin(); itr != Events.end(); ++itr){
+    for(auto itr = Events.begin(); itr != Events.end(); ++itr){
         cout << itr->serializeForView() << "\n";
     }
 }

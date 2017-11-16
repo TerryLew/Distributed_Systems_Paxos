@@ -14,6 +14,7 @@ private:
     string _utcTime;
     
 public:
+    Event();
     Event(string& str);
     
     int getUserId() { return _userId; }
