@@ -33,25 +33,35 @@ class Server {
   private:
     int serverSock, clientSock;
     struct sockaddr_in serverAddr, clientAddr;
-    
-    int userId;
-    Log log;
-    int numSites;
-    set<Event> timeline;
-    unordered_set<int> block;
     set<pair<int, int> > fdv;
     unordered_map<int, pair<string, string> > addr;
     
+    int userId;
+    int numSites;
+    
+    Log log;
+    set<Event> timeline;
+    unordered_set<int> block;
+    
+    vector<int> maxPrepare;
+    vector<int> accNum;
+    vector<int> accVal;
+    vector<int> accNum_tmp;
+    vector<int> accVal_tmp;
+    vector<int> majorityPromise;
+    vector<int> majorityAck;
+    
 
   public:
-    Server(int siteID, unordered_map<int, pair<string, string> >& address, int numSites);
-    static void * HandleClient(void *args);
+    Server(int siteId, unordered_map<int, pair<string, string> >& address, int numSites);
+    
+    void start();
     static void* startTweet(void *args);
     void doStartTweet();
-    void doAcceptRequest();
+    static void * HandleClient(void *args);
     void doHandleClient(int fd);
     static void* acceptRequest(void *args);
-    void start();
+    void doAcceptRequest();
     
     void doSomethingWithReceivedData(string& message);
     
@@ -65,9 +75,8 @@ class Server {
     void block(string& input);
     void unblock(string& input);
     void view();
-    void viewlog();
-
-    vector<vector<int> > recvTT(string& tmsg);
+    void viewLog();
+    void viewBlock();
 };
 
 #endif

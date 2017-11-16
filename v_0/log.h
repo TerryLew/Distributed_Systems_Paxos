@@ -18,18 +18,6 @@
 
 using namespace std;
 
-class Event{
-public:
-    int userId;
-    string op;
-    string data;
-
-    const string covToString() const;
-    const string convToStringForViewlog() const;
-    const string convToStringForStoring() const;
-
-};
-
 struct comp {
     bool operator()(const Event& a, const Event& b) {
         return a.covToString() < b.covToString();
