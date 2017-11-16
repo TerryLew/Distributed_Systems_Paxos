@@ -26,11 +26,12 @@ struct comp {
 
 class Log {
 public:
-    //Log();
-    vector<Event> Events;
     void writeToDisk();
     void readFromDisk();
-    void insertLog(string op, int clock, int userID);
+    void addToLog(int slot, Event e);
+    display();
+private:
+    vector<Event> Events;
 };
 
 

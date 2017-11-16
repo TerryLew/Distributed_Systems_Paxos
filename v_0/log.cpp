@@ -16,7 +16,7 @@ using namespace std;
 void Log::writeToDisk() {
     ofstream output("log.txt");
     for(auto & i : Events)
-        output << i.convToStringForStoring() << "\n";
+        output << i.serializeForStoring() << "\n";
     output.close();
 }
 
@@ -37,34 +37,16 @@ void Log::readFromDisk() {
     input.close();
 }
 
-void Log::updateLog(string op, int clock, int userID){
-    Event newEvent;
-    newEvent.op = op;
-    newEvent.clock = clock;
-    newEvent.userID = userID;
-    Events.insert(newEvent);
-    writeToDisk();
+void Log::addToLog(int slot, Event e) {
+    if (slot < Events.size()) Events[slot]=e;
+    else Events.push_back(e);
 }
 
-void Log::updateLogUnblock(string op, int clock, int userID, int unblockID){
-    bool caninsert = true;
-    for(auto it = Events.begin(); it != Events.end();){
-        if((*it).userID == userID && (*it).op == "block " + to_string(unblockID)){
-            it = Events.erase(it);
-            caninsert = false;
-        }else{
-            it++;
-        }
+void Log::display() {
+    cout <<"____________________________________________\n";
+    for(auto& itr = Events.begin(); itr != Events.end(); ++itr){
+        cout << itr->serializeForView() << "\n";
     }
-    
-    if(caninsert){
-        Event newEvent;
-        newEvent.op = op;
-        newEvent.clock = clock;
-        newEvent.userID = userID;
-        Events.insert(newEvent);
-    }
-    writeToDisk();
 }
 
 

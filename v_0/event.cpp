@@ -36,6 +36,6 @@ const string Event::serializeForStoring() const {
     return s;
 }
 
-void Event::populate(int userId, string op, string data, struct tm* localTime, struct tm* utcTime) {
+void Event::populate(int userId, string op, string data, string localTime, string utcTime) {
     
 }

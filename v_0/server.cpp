@@ -38,15 +38,6 @@ Server::Server(int siteId, unordered_map<int, pair<string, string> >& address, i
     log.readFromDisk();
     updateInMemoryData();
     
-    //init member variables
-    maxPrepare.resize(numSites);
-    accNum.resize(numSites);
-    accVal.resize(numSites);
-    accNum_tmp.resize(numSites);
-    accVal_tmp.resize(numSites);
-    majorityPromise.resize(numSites);
-    majorityAck.resize(numSites);
-    
     string ip = address[userID].first;
     string port = address[userID].second;
     cerr << "my ip: "<<ip <<", my port: "<<stoi(port)<<"\n";
@@ -60,7 +51,7 @@ Server::Server(int siteId, unordered_map<int, pair<string, string> >& address, i
     //Avoid bind error if the socket was not close()'d last time;
     setsockopt(serverSock,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int));
     
-    if(::bind(serverSock, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
+    if(bind(serverSock, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) < 0)
         cerr << "Failed to bind";
     listen(serverSock, 5);
 }
@@ -128,26 +119,28 @@ void Server::doStartTweet() {
         time(&rawtime);
         lctm = localtime(&rawtime);//local time
         utctm = gmtime(&rawtime);//UTC time
-        Event e;
+        Event event;
         if(cmd == "tweet") {
             getline(cin, input);//get the following tweet words
             input = input.substr(1);
-            e.pupulate(userId, "tweet", input, lctm, utctm);
+            event.pupulate(userId, "tweet", input, string(asctime(lctm)), string(asctime(utctm));
+            myVal = event;
             prepare();
-            //Ni Zhang 11:37 10/15 changed sending content to be customized for each site
         } else if (cmd == "block") {
             getline(cin, input);
             input = input.substr(1);
-            e.pupulate(userId, "block", input, lctm, utctm);
+            event.pupulate(userId, "block", input, string(asctime(lctm)), string(asctime(utctm));
+            myVal = event;
             prepare();
-            block(e);
+            block(event);
         }
         else if (cmd == "unblock") {
             getline(cin, input);
             input = input.substr(1);
-            e.pupulate(userId, "unblock", input, lctm, utctm);
+            event.pupulate(userId, "unblock", input, string(asctime(lctm)), string(asctime(utctm));
+            myVal = event;
             prepare();
-            unblock(e);
+            unblock(event);
         }
         else if (cmd == "view") view();
         else if (cmd == "viewLog") viewLog();
@@ -170,7 +163,6 @@ void Server::doHandleClient(int fd) {
     string tmp;
     while((n = recv(fd, buffer, sizeof(buffer), 0))>0)
         tmp.append(buffer, n);
-    //cerr << "Received message: "<< tmp << "\n>> ";
     doSomethingWithReceivedData(tmp);
 }
 
@@ -181,14 +173,22 @@ void Server::doSomethingWithReceivedData(string& message) {
         int proposer = paxosMsg.getProposer();
         int n = paxosMsg.getNum();
         int slot = paxosMsg.getSlot();
-        if (n > maxPrepare[slot]) {
+        if (slot >= maxPrepare.size()) {
+            promise(proposer, -1, Event());
+        } else if (n > maxPrepare[slot]) {
             maxPrepare[slot] = n;
             promise(proposer, accNum[slot], accVal[slot]);
         } else try_again(proposer);
     } else if (paxosMsg.getType() == "promise") {
         int n = paxosMsg.getNum();
         Event v = paxosMsg.getValue();
-        if(accNum_tmp[curSlot] < n) accVal_tmp[curSlot] = v;
+        if (n==-1) {
+            accVal_tmp[curSlot] = myVal;
+            accNum_tmp[curSlot] = myProposal;
+        } else if(accNum_tmp[curSlot] < n) {
+            accVal_tmp[curSlot] = v;
+            accNum_tmp[curSlot] = n;
+        }
         majorityPromise[curSlot]++;
         if(majorityPromise[curSlot] > numSites/2) {
             accept(curSlot, accNum_tmp[curSlot], accVal_tmp[curSlot]);
@@ -212,10 +212,11 @@ void Server::doSomethingWithReceivedData(string& message) {
         }
     } else if (paxosMsg.getType() == "commit") {
         Event v = paxosMsg.getValue();
-        log.insertLog(v);
+        int slot = paxosMsg.getSlot();
+        log.addToLog(slot, v);
+        curSlot++;
     } else if (paxosMsg.getType() == "try_again") {
-        int proposer = paxosMsg.getProposer();
-        try_again(proposer);
+        prepare();
     }
 }
 
@@ -281,6 +282,20 @@ void Server::commit(int slot, Event accVal) {
     }
 }
 
+void Server::try_again(int prosoper) {
+    refreshConnection();
+    PaxosMsg paxosMsg("try_again", slot, accVal);
+    string msg_str = paxosMsg.serialize();
+    const char* msg = msg_str.c_str();
+    for(auto itr = fdv.begin(); itr != fdv.end(); itr++){
+        if (itr->second == proposer) {
+            send(itr->first, msg, strlen(msg), 0);
+            close(itr->first);
+            return;
+        }
+    }
+}
+
 void Server::block(int blockId) {
     block.insert(blockId);
     updateTimeline("block", blockId);
@@ -291,36 +306,35 @@ void Server::unblock(int unblockId) {
     updateTimeline("unblock", unblockId);
 }
 
-//view displays the timeline, i.e. the entire set of tweets, sorted in descending order of the time field(most recent tweets appear first), excluding tweets that the user is blocked from seeing.
-
 void Server::view() {
-    //collect tweets from the local log
     vector<Tweet> vt;
     for(auto& itr = timeline.begin(); itr != timeline.end(); itr++){
-        //for(auto & tweet : itr->second) {
-            vt.push_back(*itr);
-        //}
+        vt.push_back(*itr);
     }
     sort(vt.begin(), vt.end(), comparetime);
     cout << "Viewable tweets:" << endl;
-    for (auto it=vt.begin(); it!=vt.end(); ++it){
-        cout << ctime(&((*it).local)) << " User " << to_string((*it).userID) << " tweeted: " << (*it).message << endl;
+    for (auto itr = vt.begin(); itr != vt.end(); ++itr){
+        cout << ctime(&(itr->getLocalTime()))
+             << ": User " << to_string(itr->getUserId())
+             << " tweeted: " << itr->getData() << endl;
     }
     
 }
+
 void Server::viewLog(){
-    cout <<"____________________________________________\n";
-    //cout <<"| userID | timestamp | length | operation |\n";
-    //cout <<"----------------------------------------------------------------------------------------\n";
-    for(auto it = log.Events.begin(); it != log.Events.end(); it++){
-        cout << (*it).serializeForView() << endl;
-    }
+    log.dispay();
 }
 
 void Server::viewBlock(){
     for(auto it = block.begin(); it != block.end(); it++){
         cout << (*it).second << endl;
     }
+}
+
+int Server::chooseProposalNumber() {
+    if (myProposal==0) myProposal = siteId;
+    else myProposal += numSites;
+    return myProposal;
 }
 
 

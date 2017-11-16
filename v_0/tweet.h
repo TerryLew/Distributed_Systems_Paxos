@@ -1,11 +1,3 @@
-//
-//  tweet.h
-//  
-//
-//  Created by Ni Zhang on 10/2/17.
-//
-//
-
 #ifndef tweet_hpp
 #define tweet_hpp
 
@@ -21,15 +13,18 @@ using namespace std;
 class Tweet {
 private:
     int userId;
-    string message;
+    string data;
     time_t local;
     time_t utc;
     
     //record time in two format with the first being UTC to compare and second being local time for printing
 public:
     Tweet(Event& e);
-    getUtcTime() { return utc; }
-    getLocalTime() { return local; }
+    
+    int getUserId() { return userId; }
+    string getData() { return data; }
+    time_t getUtcTime() { return utc; }
+    time_t getLocalTime() { return local; }
 };
 
 bool comparetime(const Tweet &i,const Tweet &j);

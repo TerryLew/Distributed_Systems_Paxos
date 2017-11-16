@@ -43,6 +43,9 @@ class Server {
     set<Event> timeline;
     unordered_set<int> block;
     
+    int curSlot;
+    int myProposal;
+    Event myVal;
     vector<int> maxPrepare;
     vector<int> accNum;
     vector<int> accVal;
@@ -64,6 +67,7 @@ class Server {
     void doAcceptRequest();
     
     void doSomethingWithReceivedData(string& message);
+    void chooseProposalNumber();
     
     void prepare();
     void promise(int proposer, int accNum, Event accVal);
