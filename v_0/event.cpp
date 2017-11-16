@@ -1,28 +1,28 @@
 #include "event.h"
 
-const string Event::serialize() const{
+Event::Event(string& str) {
+    
+}
+
+const string Event::serialize() const {
     string s = "";
-    s += to_string(userID);
+    s += to_string(_userId);
     s += " ";
-    s += to_string(clock);
-    s += " ";
-    int len = op.length();//record the length of op for parsing
+    int len = _op.length();//record the length of op for parsing
     s += to_string(len);
     s += " ";
-    s += op;
+    s += _op;
     return s;
 }
 
 const string Event::serializeForView() const {
     string s = " | ";
-    s += to_string(userID);
+    s += to_string(_userId);
     s += " | ";
-    s += to_string(clock);
-    s += " | ";
-    int len = op.length();//record the length of op for parsing
+    int len = _op.length();//record the length of op for parsing
     s += to_string(len);
     s += " | ";
-    s += op;
+    s += _op;
     s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
     s += " | ";
     int cur = s.size();
@@ -31,7 +31,7 @@ const string Event::serializeForView() const {
 }
 
 const string Event::serializeForStoring() const {
-    string s = to_string(userID)+"#"+to_string(clock)+"#"+op;
+    string s = to_string(_userId)+"#"+_op;
     s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
     return s;
 }

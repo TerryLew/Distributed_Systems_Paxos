@@ -28,11 +28,8 @@ void Log::readFromDisk() {
     while(getline(input, str)) {
         int idx1 = str.find('#');
         int idx2 = str.find('#', idx1+1);
-        Event e;
-        e.userID = stoi(str.substr(0, idx1));
-        e.clock = stoi(str.substr(idx1+1, idx2-idx1));
-        e.op = str.substr(idx2+1);
-        Events.insert(e);
+        Event e(str);
+        Events.push_back(e);
     }
     input.close();
 }

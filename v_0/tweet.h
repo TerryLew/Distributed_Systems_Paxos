@@ -3,10 +3,11 @@
 
 #include <stdio.h>
 #include <iostream>
-
 #include <cstdio>
 #include <cstdlib>
 #include <time.h>
+
+#include "event.h"
 
 using namespace std;
 

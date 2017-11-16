@@ -1,26 +1,21 @@
-//
-//  Log.hpp
-//  
-//
-//  Created by Ni Zhang on 10/2/17.
-//
-//
+#ifndef _log_h_
+#define _log_h_
 
-#ifndef LogAndDictionary_hpp
-#define LogAndDictionary_hpp
 
 #include <stdio.h>
-#include "tweet.h"
 #include <set>
 #include <string>
 #include <fstream>
 #include <algorithm>
 
+#include "tweet.h"
+#include "event.h"
+
 using namespace std;
 
 struct comp {
     bool operator()(const Event& a, const Event& b) {
-        return a.covToString() < b.covToString();
+        return a.serialize() < b.serialize();
     }
 };
 
@@ -29,11 +24,9 @@ public:
     void writeToDisk();
     void readFromDisk();
     void addToLog(int slot, Event e);
-    display();
+    void display();
 private:
     vector<Event> Events;
 };
-
-
 
 #endif

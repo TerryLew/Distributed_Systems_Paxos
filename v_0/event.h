@@ -1,5 +1,11 @@
+#ifndef _event_h_
+#define _event_h_
 
-class Event{
+#include <string>
+
+using namespace std;
+
+class Event {
 private:
     int _userId;
     string _op;
@@ -8,11 +14,12 @@ private:
     string _utcTime;
     
 public:
+    Event(string& str);
     
     int getUserId() { return _userId; }
     string getOp() { return _op; }
     string getData() { return _data; }
-    string getLocalTime { return _localTime; }
+    string getLocalTime() { return _localTime; }
     string getUtcTime() { return _utcTime; }
     
     const string serialize() const;
@@ -20,5 +27,7 @@ public:
     const string serializeForStoring() const;
     
     void populate(int userId, string op, string data, string localTime, string utcTime);
-    bool isDummy() { return op==""; }
+    bool isDummy() { return _op==""; }
 };
+
+#endif

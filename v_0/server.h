@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
 
 #include <cstdio>
 #include <cstdlib>
@@ -17,13 +18,14 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 
+#include <unordered_set>
+#include <unordered_map>
+
 #include "mythread.h"
 #include "log.h"
 #include "tweet.h"
-#include <unordered_map>
-#include <set>
-#include <vector>
-#include <string>
+#include "event.h"
+
 #define BUFFER_SIZE 256
 
 using namespace std;

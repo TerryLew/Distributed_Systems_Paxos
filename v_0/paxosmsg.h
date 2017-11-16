@@ -1,3 +1,6 @@
+#include "event.h"
+
+using namespace std;
 
 class PaxosMsg {
 private:
