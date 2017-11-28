@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <list>
 
 #include <cstdio>
 #include <cstdlib>
@@ -43,7 +44,7 @@ class Server {
     int numSites;
     
     Log log;
-    set<Event> timeline;
+    list<Event> timeline;
     unordered_set<int> blockedUsers;
     
     int curSlot;
@@ -88,7 +89,7 @@ class Server {
     void viewBlock();
     
     void restoreInfo();//getback the maxPrepare, accNum and accVal from the disk
-    
+    void console(string bound, PaxosMsg& paxosMsg);
     
 };
 

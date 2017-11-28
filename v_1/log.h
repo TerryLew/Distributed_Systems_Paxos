@@ -26,6 +26,7 @@ public:
     void readFromDisk();
     void addToLog(int slot, Event e);
     void display();
+    vector<Event> getEvents() { return Events; }
 private:
     vector<Event> Events;
 };

@@ -18,10 +18,10 @@ public:
     Event(string& str);
     
     int getUserId() { return _userId; }
-    string getOp() { return _op; }
-    string getData() { return _data; }
-    string getLocalTime() { return _localTime; }
-    string getUtcTime() { return _utcTime; }
+    const string getOp() { return _op; }
+    const string getData() { return _data; }
+    const string getLocalTime() { return _localTime; }
+    const string getUtcTime() { return _utcTime; }
     
     const string serialize() const;
     const string serializeForView() const;

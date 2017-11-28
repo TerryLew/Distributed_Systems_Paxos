@@ -12,10 +12,17 @@ PaxosMsg::PaxosMsg(string type, int slot){
     _type = type;
     _slot = slot;
 }
+
+PaxosMsg::PaxosMsg(string type, int proposer, int slot) {
+    _type = type;
+    _senderId = proposer;
+    _slot = slot;
+}
+
 PaxosMsg::PaxosMsg(string type, int num, int proposer, int slot) {
     _type = type;
     _num = num;
-    _proposer = proposer;
+    _senderId = proposer;
     _slot = slot;
 }
 
@@ -43,7 +50,7 @@ PaxosMsg::PaxosMsg(string type, int accNum, Event value, int proposer) {
     _type = type;
     _num = accNum;
     _value = value;
-    _proposer = proposer;
+    _senderId = proposer;
 }
 
 
@@ -53,7 +60,7 @@ string PaxosMsg::serialize() {
         str += " ";
         str += to_string(_num);
         str += " ";
-        str += to_string(_proposer);
+        str += to_string(_senderId);
         str += " ";
         str += to_string(_slot);
         
@@ -73,7 +80,7 @@ string PaxosMsg::serialize() {
         str += " ";
         str += to_string(_num);
         str += " ";
-        str += to_string(_proposer);
+        str += to_string(_senderId);
         str += " ";
         str += _value.serialize();
         
@@ -101,7 +108,7 @@ void PaxosMsg::deserialize(string& msg) {
     if(_type == "prepare"){
         _num = stoi(cont);
         ss >> cont;
-        _proposer = stoi(cont);
+        _senderId = stoi(cont);
         ss >> cont;
         _slot = stoi(cont);
     }else if(_type == "promise" ){
@@ -118,7 +125,7 @@ void PaxosMsg::deserialize(string& msg) {
     }else if(_type == "ack"){
         _num = stoi(cont);
         ss >> cont;
-        _proposer = stoi(cont);
+        _senderId = stoi(cont);
         ss >> cont;
         Event e(cont);
     }else if(_type == "commit"){

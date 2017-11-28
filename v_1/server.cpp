@@ -167,8 +167,9 @@ void Server::doHandleClient(int fd) {
 
 void Server::doSomethingWithReceivedData(string& message) {
     PaxosMsg paxosMsg(message);
+    console("recv", paxosMsg);
     if(paxosMsg.getType() == "prepare") {
-        int proposer = paxosMsg.getProposer();
+        int proposer = paxosMsg.getSenderId();
         int n = paxosMsg.getNum();
         int slot = paxosMsg.getSlot();
         if (slot >= maxPrepare.size()) {
@@ -194,7 +195,7 @@ void Server::doSomethingWithReceivedData(string& message) {
     } else if (paxosMsg.getType() == "accept") {
         int n = paxosMsg.getNum();
         int slot = paxosMsg.getSlot();
-        int proposer = paxosMsg.getProposer();
+        int proposer = paxosMsg.getSenderId();
         Event v = paxosMsg.getValue();
         if (n >= maxPrepare[slot]) {
             accNum[slot] = n;
@@ -230,6 +231,8 @@ void Server::prepare() {
         send(itr->first, msg, strlen(msg), 0);
         close(itr->first);
     }
+    console("send", paxosMsg);
+    //cout << userId << " sends prepare(" << n <<") for slot "<<slot<<"\n";
 }
 
 void Server::promise(int proposer, int accNum, Event accVal) {
@@ -244,6 +247,9 @@ void Server::promise(int proposer, int accNum, Event accVal) {
             return;
         }
     }
+    console("send", paxosMsg);
+    //cout << userId << " sends promise(" << accNum <<","<<
+        //accVal.serializeForView()<<") for slot "<<slot<<"\n";
 }
 
 void Server::Accept(int slot, int accNum, Event accVal) {
@@ -255,6 +261,9 @@ void Server::Accept(int slot, int accNum, Event accVal) {
         send(itr->first, msg, strlen(msg), 0);
         close(itr->first);
     }
+    console("send", paxosMsg);
+    //cout << userId << " sends accept(" << accNum <<","<<
+        //accVal.serializeForView()<<") for slot "<<slot<<"\n";
 }
 
 void Server::ack(int proposer, int accNum, Event accVal) {
@@ -269,6 +278,9 @@ void Server::ack(int proposer, int accNum, Event accVal) {
             return;
         }
     }
+    console("send", paxosMsg);
+    //cout << userId << " sends ack(" << accNum <<","<<
+        //accVal.serializeForView()<<") for slot "<<slot<<"\n";
 }
 
 void Server::commit(int slot, Event accVal) {
@@ -280,11 +292,14 @@ void Server::commit(int slot, Event accVal) {
         send(itr->first, msg, strlen(msg), 0);
         close(itr->first);
     }
+    console("send", paxosMsg);
+    //cout << userId << " sends commit(" <<
+        //accVal.serializeForView() << ") for slot "<<slot<<"\n";
 }
 
 void Server::try_again(int proposer, int slot) {
     refreshConnection();
-    PaxosMsg paxosMsg("try_again", slot);
+    PaxosMsg paxosMsg("try_again", proposer, slot);
     string msg_str = paxosMsg.serialize();
     const char* msg = msg_str.c_str();
     for(auto itr = fdv.begin(); itr != fdv.end(); itr++){
@@ -294,6 +309,8 @@ void Server::try_again(int proposer, int slot) {
             return;
         }
     }
+    console("send", paxosMsg);
+    //cout << userId << " sends try_again(" << proposer << ") for slot "<<slot<<"\n";
 }
 
 void Server::block(int blockId) {
@@ -339,7 +356,23 @@ int Server::chooseProposalNumber() {
 }
 
 void Server::updateTimeline(string keyword, int target) {
-    
+    if (keyword == "block") {
+        if(blockedUsers.count(target)==1) return;
+        for(auto itr = timeline.begin(); itr!= timeline.end(); ) {
+            if(itr->getUserId() == target) {
+                itr = timeline.erase(itr);
+            } else itr++;
+        }
+        blockedUsers.insert(target);
+    } else if (keyword == "unblock") {
+        if (blockedUsers.count(target)==0) return;
+        blockedUsers.erase(target);
+        for(auto & i : log.getEvents()) {
+            if (i.getOp()=="tweet" && i.getUserId()==target) {
+                timeline.push_back(i);
+            }
+        }
+    }
 }
 
 void Server::updateInMemoryData() {
@@ -377,6 +410,35 @@ void Server::restoreInfo(){
     }
     input3.close();
 
+}
+
+void Server::console(string bound, PaxosMsg& paxosMsg) {
+    if(bound == "send")
+        cout << userId << " sends: ";
+    else if(bound == "recv")
+        cout << userId << " recv from " << paxosMsg.getSenderId()<<": ";
+    if (paxosMsg.getType() == "prepare") {
+        cout << "prepare(" << paxosMsg.getNum() <<
+            ") for slot "<<paxosMsg.getSlot()<<"\n";
+    } else if (paxosMsg.getType() == "promise") {
+        cout << "promise(" << paxosMsg.getNum() <<","<<
+            paxosMsg.getValue().serializeForView()<<") for slot "<<
+            paxosMsg.getSlot()<<"\n";
+    } else if (paxosMsg.getType() == "accept") {
+        cout << "accept(" << paxosMsg.getNum() <<","<<
+            paxosMsg.getValue().serializeForView()<<") for slot "<<
+            paxosMsg.getSlot()<<"\n";
+    } else if (paxosMsg.getType() == "ack") {
+        cout << "ack(" << paxosMsg.getNum() <<","<<
+            paxosMsg.getValue().serializeForView()<<") for slot "<<
+            paxosMsg.getSlot()<<"\n";
+    } else if (paxosMsg.getType() == "commit") {
+        cout << "commit(" << paxosMsg.getValue().serializeForView()<<
+            ") for slot "<< paxosMsg.getSlot()<<"\n";
+    } else if (paxosMsg.getType() == "try_again"){
+        cout << "try_again(" << paxosMsg.getSenderId() <<
+            ") for slot "<< paxosMsg.getSlot()<<"\n";
+    }
 }
 
 //need to write to disk
