@@ -50,7 +50,8 @@ class Server {
     bool okToTweet;
     Log log;
     list<Event> timeline;
-    unordered_set<int> blockedUsers;
+    unordered_set<int> isBlockedBy;
+    unordered_set<int> blockedUser;
     
     int maxSlot;
     int curSlot;
@@ -80,6 +81,7 @@ class Server {
     int chooseProposalNumber();
     void updateTimeline(string keyword, int target = -1);
     void updateInDiskData();
+    void rebuildInMemoryData();
     
     
     void fillUpLogSynod();

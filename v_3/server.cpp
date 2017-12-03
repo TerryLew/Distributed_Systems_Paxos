@@ -48,9 +48,8 @@ Server::Server(int siteId, unordered_map<int, pair<string, string> >& address, i
     userId = siteId;
     numSites = numSites_;
     //Each site(server) store the log containing tweet, block and unblock events
-    
-    Log log;
     log.readFromDisk(userId);
+    rebuildInMemoryData();
     restoreInfo();
     
     string ip = address[userId].first;
@@ -143,7 +142,6 @@ void Server::doStartTweet() {
     
     while(1) {
         if(okToTweet){
-        
             cout << ">> ";
             string cmd, input;
             cin >> cmd;
@@ -295,7 +293,7 @@ void Server::doSomethingWithReceivedData(string& message) {
             log.addToLog(slot, v);
             log.writeToDisk(userId);
             updateInDiskData();
-
+            if (v.getOp() == "tweet") timeline.push_back(v);
             commit(curSlot, v);
             curSlot++;
         }
@@ -305,14 +303,13 @@ void Server::doSomethingWithReceivedData(string& message) {
         log.addToLog(slot, v);
         log.writeToDisk(userId);
         updateInDiskData();
-        if (v.getOp() == "tweet") timeline.push_back(v);
-        //changed the blockedusers mathod
+        if (v.getOp() == "tweet" && isBlockedBy.count(v.getUserId())==0) timeline.push_back(v);
+        //changed the blockeduser mathod
         if (v.getOp() == "block" && stoi(v.getData()) == userId)  {
             updateTimeline("block", v.getUserId());
         }else if(v.getOp() == "unblock" && stoi(v.getData()) == userId){
             updateTimeline("unblock", v.getUserId());
         }
-        
         curSlot++;
     } else if (paxosMsg.getType() == "try_again") {
         prepare(curSlot);
@@ -437,12 +434,12 @@ void Server::try_again(int proposer, int slot) {
 }
 
 void Server::block(int blockId) {
-    blockedUsers.insert(blockId);
+    blockedUser.insert(blockId);
     //updateTimeline("block", blockId);
 }
 
 void Server::unblock(int unblockId) {
-    blockedUsers.erase(unblockId);
+    blockedUser.erase(unblockId);
     //updateTimeline("unblock", unblockId);
 }
 
@@ -470,7 +467,7 @@ void Server::viewLog(){
 }
 
 void Server::viewBlock() {
-    for(auto it = blockedUsers.begin(); it != blockedUsers.end(); it++){
+    for(auto it = blockedUser.begin(); it != blockedUser.end(); it++){
         cout << *it << endl;
     }
 }
@@ -483,24 +480,26 @@ int Server::chooseProposalNumber() {
 
 void Server::updateTimeline(string keyword, int target) {
     if (keyword == "block") {
-        cout << "block updateTT" << target <<  endl;
+        if (isBlockedBy.count(target)!=0) return;
         for(auto itr = timeline.begin(); itr!= timeline.end(); ) {
             if(itr->getUserId() == target) {
                 itr = timeline.erase(itr);
             } else itr++;
         }
+        isBlockedBy.insert(target);
     } else if (keyword == "unblock") {
+        if(isBlockedBy.count(target)==0) return;
         for(auto & i : log.getEvents()) {
             if (i.getOp()=="tweet" && i.getUserId()==target) {
                 timeline.push_back(i);
             }
         }
+        isBlockedBy.erase(target);
     }
 }
 
 
 //save MaxPrepare accNum and accVal
-
 void Server::updateInDiskData() {
     string filename1 = "MaxPrepare" + to_string(userId);
     ofstream output1(filename1.c_str());
@@ -519,8 +518,27 @@ void Server::updateInDiskData() {
     for(auto & i : accVal)
         output3 << i.serializeForStoring() << "\n";
     output3.close();
-    
-    
+}
+
+void Server::rebuildInMemoryData() {
+    for(auto & event : log.getEvents()) {
+        if (event.getOp() == "block") {
+            if (event.getUserId()==userId)
+                blockedUser.insert(stoi(event.getData()));
+            else if (stoi(event.getData()) == userId)
+                isBlockedBy.insert(event.getUserId());
+        } else if (event.getOp() == "unblock") {
+            if (event.getUserId() == userId)
+                blockedUser.erase(stoi(event.getData()));
+            else if (stoi(event.getData()) == userId)
+                isBlockedBy.erase(event.getUserId());
+        }
+    }
+    for(auto & event : log.getEvents()) {
+        if (event.getOp() == "tweet" &&
+            isBlockedBy.count(event.getUserId())==0)
+            timeline.push_back(event);
+    }
 }
 
 //read MaxPrepare accNum and accVal
