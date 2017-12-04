@@ -358,7 +358,7 @@ void Server::synod(){
     chooseProposalNumber();
     cout << maxPrepare.size() << "curSlot is " << curSlot << endl;
     if(curSlot!=0 && accVal[curSlot-1].getUserId()==userId) {
-        accept(curSlot, 0, myVal);
+        Accept(curSlot, 0, myVal);
     } else {
         while (maxPrepare.size() <= curSlot) {
             
